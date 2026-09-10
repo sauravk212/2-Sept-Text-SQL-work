@@ -17,8 +17,10 @@ failed_questions_cre_Drama_Workshop_Groups.json
 failed_questions_cre_Drama_Workshop_Groups.json
 imdb_schema.json
 sakila_1_retrieval_failures.json
-sakila_1_schema.json
+sakila_1_scwhema.json
 sakila_1_schema.json
 sakila_1_schema.txt
 tables.json
 train_spider.json
+/.venv
+/.deepeval

@@ -1,0 +1,21 @@
+command:
+  - "uvicorn"
+  - "app:app"
+  - "--host"
+  - "0.0.0.0"
+  - "--port"
+  - "$DATABRICKS_APP_PORT"
+
+env:
+  # Which Spider database to serve. Must match the .db and _schema.txt you ship.
+  - name: "DATABASE_NAME"
+    value: "cre_Drama_Workshop_Groups"
+
+  # Pulled from a Databricks secret. Add the secret as an app resource named
+  # "openai-api-key" in the app's Configuration tab before deploying.
+  - name: "OPENAI_API_KEY"
+    valueFrom: "openai-api-key"
+
+  # Keeps Python from writing .pyc files into the read-only source directory.
+  - name: "PYTHONDONTWRITEBYTECODE"
+    value: "1"

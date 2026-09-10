@@ -1,0 +1,23 @@
+# Web layer
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+python-dotenv>=1.0.1
+
+# LLM + agent. Keep these three on the same generation — a stale langchain-core
+# next to a fresh langgraph is what caused the Reviver/allowed_objects crash.
+langgraph>=0.6.0
+langchain-core>=0.3.60
+langchain-openai>=0.3.0
+
+# openai <1.55.3 passes proxies= into httpx, which httpx 0.28 removed.
+openai>=1.55.3
+httpx>=0.28.0
+
+# Add whatever schema_store_retrival_2.py needs for the vector store here,
+# e.g. chromadb / faiss-cpu / numpy. Run `pip freeze` in a working venv to
+# capture the exact set before you deploy.
+
+
+qdrant-client
+fastembed

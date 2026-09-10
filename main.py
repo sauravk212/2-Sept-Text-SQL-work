@@ -169,8 +169,8 @@ def generate_sql_node(state: State):
     print("\nGENERATED SQL:")
     print(sql)
 
-    print("\nEXPECTED SQL:")
-    print(expected_sql)
+    # print("\nEXPECTED SQL:")
+    # print(expected_sql)
 
     return {
         "sql": sql,
@@ -222,6 +222,22 @@ graph_builder.add_conditional_edges(
 )
 
 graph = graph_builder.compile()
+
+
+def safe_parse_generated_rows(raw_value):
+    if raw_value is None:
+        return []
+    value = str(raw_value).strip()
+    if not value or value.lower() in {"null", "none"}:
+        return []
+    try:
+        parsed = ast.literal_eval(value)
+        if isinstance(parsed, list):
+            return parsed
+        return [parsed]
+    except (ValueError, SyntaxError):
+        print("Bad generated result:", repr(raw_value))
+        return []
 
 
 def run_question(question: str):
@@ -305,7 +321,7 @@ if __name__ == "__main__":
                 continue
 
             try:
-                generated_rows = ast.literal_eval(generated_result)
+                generated_rows = safe_parse_generated_rows(generated_result)
             except Exception:
                 failed_count += 1
                 failed_questions.append(

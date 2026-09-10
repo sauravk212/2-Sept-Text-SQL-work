@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ask the database</title>
+<style>
+  :root {
+    --shell: #e6eaee;
+    --surface: #ffffff;
+    --ink: #222b34;
+    --muted: #66727e;
+    --rule: #ccd3da;
+    --signal: #1c5b50;
+    --alarm: #8a3626;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--shell);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+  }
+
+  header h1 {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0 0 6px;
+  }
+
+  header p {
+    margin: 0 0 32px;
+    color: var(--muted);
+    max-width: 58ch;
+  }
+
+  .ask {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 18px 18px 14px;
+  }
+
+  textarea {
+    width: 100%;
+    border: 0;
+    resize: vertical;
+    min-height: 74px;
+    font: inherit;
+    color: inherit;
+    background: transparent;
+    outline: none;
+  }
+
+  textarea::placeholder { color: #9aa5b1; }
+
+  .ask-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-top: 1px solid var(--rule);
+    margin-top: 12px;
+    padding-top: 12px;
+  }
+
+  .hint { color: var(--muted); font-size: 13.5px; }
+
+  button {
+    font: inherit;
+    font-weight: 550;
+    color: #fff;
+    background: var(--signal);
+    border: 0;
+    border-radius: 7px;
+    padding: 9px 20px;
+    cursor: pointer;
+  }
+
+  button:hover:not(:disabled) { background: #16483f; }
+  button:disabled { background: #93a09b; cursor: default; }
+  button:focus-visible, textarea:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+  .samples { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .samples button {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 5px 13px;
+    font-size: 13.5px;
+    font-weight: 400;
+  }
+
+  .samples button:hover:not(:disabled) { background: var(--surface); color: var(--ink); }
+
+  #out { margin-top: 40px; }
+  #out:empty { display: none; }
+
+  .block { margin-bottom: 28px; }
+
+  .caption {
+    font-size: 13.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  pre.sql {
+    margin: 0;
+    background: var(--surface);
+    border-left: 3px solid var(--signal);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 18px;
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  pre.sql.failed { border-left-color: var(--alarm); }
+
+  .scroll {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+
+  table { border-collapse: collapse; width: 100%; font-family: var(--mono); font-size: 13.5px; }
+  td { padding: 9px 16px; border-bottom: 1px solid #eef1f4; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.idx { color: #a4aeb8; width: 1%; text-align: right; }
+
+  .note {
+    background: var(--surface);
+    border-left: 3px solid var(--alarm);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    color: var(--alarm);
+    font-size: 14.5px;
+  }
+
+  .empty { color: var(--muted); font-size: 14.5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ask the database</h1>
+    <p>Write a question the way you would say it out loud. The agent picks the tables it needs, writes the SQL, runs it, and retries once if the query fails.</p>
+  </header>
+
+  <div class="ask">
+    <textarea id="q" placeholder="Which shops sold the most units last quarter?" autofocus></textarea>
+    <div class="ask-foot">
+      <span class="hint">Press Ctrl + Enter to run</span>
+      <button id="run">Run query</button>
+    </div>
+  </div>
+
+  <div class="samples" id="samples"></div>
+
+  <div id="out"></div>
+</div>
+
+<script>
+  const qEl = document.getElementById("q");
+  const runEl = document.getElementById("run");
+  const outEl = document.getElementById("out");
+
+  const samples = [
+    "How many rows are in each table?",
+    "List the five most recent records.",
+    "What is the average value grouped by category?"
+  ];
+
+  const samplesEl = document.getElementById("samples");
+  samples.forEach(text => {
+    const b = document.createElement("button");
+    b.textContent = text;
+    b.addEventListener("click", () => { qEl.value = text; qEl.focus(); });
+    samplesEl.appendChild(b);
+  });
+
+  const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+  function block(caption, inner) {
+    return `<div class="block"><div class="caption">${caption}</div>${inner}</div>`;
+  }
+
+  function renderTable(rows) {
+    const body = rows.map((row, i) => {
+      const cells = Array.isArray(row) ? row : [row];
+      return `<tr><td class="idx">${i + 1}</td>` +
+             cells.map(c => `<td>${esc(c === null ? "NULL" : c)}</td>`).join("") +
+             `</tr>`;
+    }).join("");
+    return `<div class="scroll"><table><tbody>${body}</tbody></table></div>`;
+  }
+
+  function render(data) {
+    const parts = [];
+
+    if (data.sql) {
+      const cls = data.error ? "sql failed" : "sql";
+      parts.push(block("Generated SQL", `<pre class="${cls}">${esc(data.sql)}</pre>`));
+    }
+
+    if (data.error) {
+      parts.push(block("The query did not run",
+        `<div class="note">${esc(data.error)}</div>`));
+    } else if (data.row_count === 0) {
+      parts.push(block("Results", `<p class="empty">The query ran and matched no rows.</p>`));
+    } else {
+      const retried = data.retries > 0 ? `, after ${data.retries} retry` : "";
+      const caption = `${data.row_count} row${data.row_count === 1 ? "" : "s"} in ${data.elapsed_ms} ms${retried}`;
+      parts.push(block(caption, renderTable(data.rows)));
+    }
+
+    outEl.innerHTML = parts.join("");
+  }
+
+  async function run() {
+    const question = qEl.value.trim();
+    if (!question) { qEl.focus(); return; }
+
+    runEl.disabled = true;
+    runEl.textContent = "Running";
+    outEl.innerHTML = `<p class="empty">Choosing tables and writing the query…</p>`;
+
+    try {
+      const res = await fetch("query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        outEl.innerHTML = block("The request failed",
+          `<div class="note">${esc(data.detail || res.statusText)}</div>`);
+        return;
+      }
+
+      render(data);
+    } catch (err) {
+      outEl.innerHTML = block("The request failed",
+        `<div class="note">${esc(err.message)}. Check that the app is still running.</div>`);
+    } finally {
+      runEl.disabled = false;
+      runEl.textContent = "Run query";
+    }
+  }
+
+  runEl.addEventListener("click", run);
+  qEl.addEventListener("keydown", e => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) run();
+  });
+</script>
+</body>
+</html>
