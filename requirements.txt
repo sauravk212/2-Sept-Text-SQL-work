@@ -18,6 +18,5 @@ httpx>=0.28.0
 # e.g. chromadb / faiss-cpu / numpy. Run `pip freeze` in a working venv to
 # capture the exact set before you deploy.
 
-
 qdrant-client
 fastembed
